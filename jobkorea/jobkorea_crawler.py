@@ -9,6 +9,7 @@ import re
 import json
 from bs4 import BeautifulSoup,Comment
 import requests
+from datetime import datetime
 
 service = Service(executable_path='/Users/jang-gyeonghun/RAG/driver/chromedriver')
 options = webdriver.ChromeOptions()
@@ -37,6 +38,15 @@ headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"
 }
 
+key_mapping={
+    '학력': 'education',
+    '경력': 'work_history',
+    '고용형태': 'job_type',
+    '급여': 'salary',
+    '지역': 'working area',
+}
+
+
 try:
     for i in range(2,10):
         links=driver.find_element(By.ID,'dev-gi-list').find_elements(By.TAG_NAME, 'strong')
@@ -48,16 +58,26 @@ try:
             soup=BeautifulSoup(html, 'html.parser')
             tbs=soup.find_all('dl',class_='tbList')
             dic['co_name']=re.sub(' +',' ',soup.find('span',class_='coName').text).replace('\r','').replace('\n','').strip()
-            dic['name']=re.sub(' +',' ',list(soup.find('h3',class_='hd_3').children)[-1]).replace('\r','').replace('\n','').strip()
+            dic['title']=re.sub(' +',' ',list(soup.find('h3',class_='hd_3').children)[-1]).replace('\r','').replace('\n','').strip()
+            try:
+                dic['start_date']=soup.find_all('dl',class_='date')[0].find_all('span','tahoma')[0].text
+                dic['end_date']=soup.find_all('dl',class_='date')[0].find_all('span','tahoma')[1].text
+            except:
+                dic['start_date']=datetime.today().strftime('%Y-%m-%d')
+                dic['end_date']='상시채용'
             cnt=0
             for tb in tbs:
                 cnt+=1
                 dt=tb.find_all('dt')
                 dd=tb.find_all('dd')
                 for key,value in zip(dt,dd):
-                    dic[key.text]=re.sub(' +',' ',value.text.replace('\n', '').replace('\r', '').strip())
+                    key_text = key.text
+                    if key_text in key_mapping:
+                        key_text = key_mapping[key_text]
+                    dic[key_text] = re.sub(' +', ' ', value.text.replace('\n', '').replace('\r', '').strip())
                 if cnt==2:
                     break
+
             iframe_url=soup.find('iframe', attrs={'name': 'gib_frame'})['src']
             iframe_response = requests.get('https://www.jobkorea.co.kr'+iframe_url,headers=headers)
             time.sleep(random.randint(1,5))
@@ -75,7 +95,6 @@ try:
                 for img in iframe_soup.find_all("img"):
                     img.replace_with("")
                 dic['detail_data']=str(iframe_soup)
-
             except:
                 print('error')
             json_data = json.dumps(dic, ensure_ascii=False, indent=4)
@@ -86,12 +105,5 @@ try:
     driver.find_element(By.CLASS_NAME,'tplBtn.btnPgnNext').click()
 except:
     print('finish')
-'''
 
 
-
-div detailed-summary-contents
-secDetailWrap
-p, web
-
-'''
