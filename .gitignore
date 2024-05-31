@@ -1,0 +1,17 @@
+# Ignore Python bytecode files
+__pycache__/
+
+# Ignore JSON files
+*.json
+
+# Ignore image files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.svg
+
+# Ignore image directories
+images/
+*.ipynb

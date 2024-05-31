@@ -8,6 +8,7 @@ import time
 import json
 import random
 import re
+import platform
 
 # User-Agent 정의
 user_agents = [
@@ -17,6 +18,21 @@ user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.135 Safari/537.36 OPR/70.0.3728.178',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36 Edge/17.17134'
 ]
+
+def get_chromedriver_path():
+    """
+    운영 체제에 따라 적절한 chromedriver 경로를 반환합니다.
+
+    Returns:
+        str: chromedriver 경로.
+    """
+    os_name = platform.system()
+    if os_name == 'Darwin':  # macOS
+        return './chromedriver-mac-arm64-2/chromedriver'
+    elif os_name == 'Windows':  # Windows
+        return '.\\chromedriver-win64\\chromedriver.exe'
+    else:
+        raise Exception(f'Unsupported operating system: {os_name}')
 
 def init_driver(path):
     """
@@ -60,6 +76,7 @@ def get_job_urls(user_agents, driver, page_count):
                 print(f'{len(url_list)}번째 url을 성공적으로 추출하였습니다.')
             except Exception:
                 pass
+        break
     return url_list
 
 def extract_metadata(soup):
@@ -191,7 +208,7 @@ def task1(user_agents):
     Returns:
         list: 채용공고 URL 리스트.
     """
-    path = '/Users/choejeehyuk/Downloads/chromedriver-mac-arm64-2/chromedriver'
+    path = get_chromedriver_path()
     driver = init_driver(path)
     url = 'https://www.saramin.co.kr/zf_user/search?cat_mcls=2&company_cd=0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C9%2C10&panel_type=&search_optional_item=y&search_done=y&panel_count=y&preview=y&recruitPage=1&recruitSort=relation&recruitPageCount=10&inner_com_type=&searchword=&show_applied=&quick_apply=&except_read=&ai_head_hunting=&mainSearch=n'
     driver.get(url)
@@ -212,7 +229,7 @@ def task2(url_list):
     Args:
         url_list (list): 처리할 채용공고 URL 리스트.
     """
-    path = '/Users/choejeehyuk/Downloads/chromedriver-mac-arm64-2/chromedriver'
+    path = get_chromedriver_path()
     driver = init_driver(path)
     today = datetime.datetime.now().strftime('%Y-%m-%d')
     headers = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"}
@@ -281,6 +298,8 @@ def task2(url_list):
                 f.write(',\n')
             else:
                 f.write('\n]')
+        
+        breakpoint()
         
         end_time_all = time.time()
         execution_time_all = end_time_all - start_time_all
