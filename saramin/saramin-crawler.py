@@ -31,6 +31,8 @@ def get_chromedriver_path():
         return './chromedriver-mac-arm64-2/chromedriver'
     elif os_name == 'Windows':  # Windows
         return '.\\chromedriver-win64\\chromedriver.exe'
+    elif os_name == 'Linux':  # Linux
+        return './chromedriver-linux64/chromedriver'
     else:
         raise Exception(f'Unsupported operating system: {os_name}')
 
@@ -292,14 +294,12 @@ def task2(url_list):
             print(f'Error processing 채용공고 내용 {url}: {e}')
             continue
 
-        with open('job_data.json', 'a', encoding='utf-8') as f:
+        with open('../ocr/data/saramin_job_data.json', 'a', encoding='utf-8') as f:
             json.dump(job_info_all, f, ensure_ascii=False, indent=4)
             if index < len(url_list) - 1:
                 f.write(',\n')
             else:
                 f.write('\n]')
-        
-        breakpoint()
         
         end_time_all = time.time()
         execution_time_all = end_time_all - start_time_all
