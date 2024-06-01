@@ -118,10 +118,8 @@ def recognizer_predict(model, converter, test_loader, opt2val: dict):
     model.eval()
     result = []
     with torch.no_grad():
-        print(len(test_loader))
         for image_tensors in test_loader:
             batch_size = image_tensors.size(0)
-            print(batch_size)
             inputs = image_tensors.to(device)
             preds = model(inputs)  # (N, length, num_classes)
 

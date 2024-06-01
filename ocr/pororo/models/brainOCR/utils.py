@@ -13,6 +13,9 @@ from PIL import Image
 import PIL
 PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 from torch import Tensor
+from io import BytesIO
+from PIL import Image
+import requests
 
 from .imgproc import load_image
 
@@ -682,7 +685,7 @@ def printProgressBar(
 
     return progress_hook
 
-def reformat_input(image):
+def reformat_input(image, use_requests=False):
     """
     :param image: image file path or bytes or array
     :return:
@@ -691,20 +694,30 @@ def reformat_input(image):
     """
     if type(image) == str:
         if image.startswith("http://") or image.startswith("https://"):
-            tmp, _ = urlretrieve(
-                image,
-                reporthook=printProgressBar(
-                    prefix="Progress:",
-                    suffix="Complete",
-                    length=50,
-                ),
-            )
-            img_cv_grey = cv2.imread(tmp, cv2.IMREAD_GRAYSCALE)
-            os.remove(tmp)
+            if use_requests:
+                # Use requests to get image
+                response = requests.get(image)
+                img = Image.open(BytesIO(response.content))
+                img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+                img_cv_grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            else:
+                # Use urlretrieve to download the image
+                tmp, _ = urlretrieve(
+                    image,
+                    reporthook=printProgressBar(
+                        prefix="Progress:",
+                        suffix="Complete",
+                        length=50,
+                    ),
+                )
+                img_cv_grey = cv2.imread(tmp, cv2.IMREAD_GRAYSCALE)
+                os.remove(tmp)
+                img = load_image(image)  # can accept URL
         else:
+            # Local file path
             img_cv_grey = cv2.imread(image, cv2.IMREAD_GRAYSCALE)
             image = os.path.expanduser(image)
-        img = load_image(image)  # can accept URL
+            img = load_image(image)  # can accept URL
     elif type(image) == bytes:
         nparr = np.frombuffer(image, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
