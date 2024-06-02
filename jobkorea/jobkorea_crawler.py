@@ -91,6 +91,7 @@ try:
                 for img in iframe_soup.find_all("img"):
                     if img.get('src') not in 'logo' and img.get('src') not in 'icon':
                         img_list.append(img.get('src'))
+                img_list = list(set(img_list))
                 dic['img_list']=img_list
                 for img in iframe_soup.find_all("img"):
                     img.replace_with("")

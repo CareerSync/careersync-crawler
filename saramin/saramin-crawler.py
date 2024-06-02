@@ -178,6 +178,8 @@ def extract_job_details(driver, headers):
     
     table_html = iframe_soup.find('table')
     
+    img_list = list(set(img_list))
+    
     if table_html is not None: # 테이블이 존재하는 경우
         return img_list, str(iframe_soup.html)
     else: # 테이블이 존재하지 않는 경우
