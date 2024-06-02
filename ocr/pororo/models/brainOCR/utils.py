@@ -694,21 +694,16 @@ def reformat_input(image, use_requests=False):
     """
     if type(image) == str:
         if image.startswith("http://") or image.startswith("https://"):
-            if use_requests:
+            try:
                 # Use requests to get image
                 response = requests.get(image)
                 img = Image.open(BytesIO(response.content))
                 img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
                 img_cv_grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            else:
+            except:
                 # Use urlretrieve to download the image
                 tmp, _ = urlretrieve(
                     image,
-                    reporthook=printProgressBar(
-                        prefix="Progress:",
-                        suffix="Complete",
-                        length=50,
-                    ),
                 )
                 img_cv_grey = cv2.imread(tmp, cv2.IMREAD_GRAYSCALE)
                 os.remove(tmp)

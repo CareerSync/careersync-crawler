@@ -71,6 +71,8 @@ def process_image_urls(ocr, img_urls, co_name, client, model, num_retry=4):
     """
     OCR_results = []
     for img_url in img_urls:
+        if img_url == "" or not any(ext in img_url for ext in ['.jpg', '.png', '.jpeg']):
+            continue
         ocr_result = ocr.run_ocr(img_url, debug=False)
         print("=" * 50)
         print(ocr_result)
@@ -108,6 +110,8 @@ def main():
     client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     data_path = "./data/saramin_job_data.json"
     result_path = "./data/OCR_saramin_job_data.json"
+    # data_path = "./data/jobkorea_data.json"
+    # result_path = "./data/jobkorea_OCR_data.json"
     model = 'gpt-3.5-turbo'
 
     # Load data
@@ -118,8 +122,8 @@ def main():
     # Process each item in data
     print_interval = 100  # Set this to the desired interval
     for i, item in enumerate(data):
-        img_list = item['img_list']
-        co_name = item['Co_name']
+        img_list = list(set(item['img_list']))
+        co_name = item['Co_name'] if 'Co_name' in item else item['co_name']
         if img_list == []:
             print(f"No images found for {co_name}")
             continue

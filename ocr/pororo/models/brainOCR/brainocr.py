@@ -233,7 +233,7 @@ class Reader(object):
         self.opt2val["width_ths"] = width_ths
         self.opt2val["add_margin"] = add_margin
 
-        img, img_cv_grey = reformat_input(image, use_requests=True)  # img, img_cv_grey: array
+        img, img_cv_grey = reformat_input(image)  # img, img_cv_grey: array
 
         horizontal_list, free_list = self.detect(img, self.opt2val)
         result = self.recognize(

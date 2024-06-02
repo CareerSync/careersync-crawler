@@ -68,6 +68,7 @@ class Pororo:
 
         # Get device information from torch API
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(device)
 
         # Instantiate task-specific pipeline module, if possible
         task_module = SUPPORTED_TASKS[task](
