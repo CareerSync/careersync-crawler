@@ -8,7 +8,6 @@ import time
 import json
 import random
 import re
-import platform
 
 # User-Agent 정의
 user_agents = [
@@ -18,23 +17,6 @@ user_agents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.135 Safari/537.36 OPR/70.0.3728.178',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36 Edge/17.17134'
 ]
-
-def get_chromedriver_path():
-    """
-    운영 체제에 따라 적절한 chromedriver 경로를 반환합니다.
-
-    Returns:
-        str: chromedriver 경로.
-    """
-    os_name = platform.system()
-    if os_name == 'Darwin':  # macOS
-        return './chromedriver-mac-arm64-2/chromedriver'
-    elif os_name == 'Windows':  # Windows
-        return '.\\chromedriver-win64\\chromedriver.exe'
-    elif os_name == 'Linux':  # Linux
-        return './chromedriver-linux64/chromedriver'
-    else:
-        raise Exception(f'Unsupported operating system: {os_name}')
 
 def init_driver(path):
     """
@@ -64,9 +46,9 @@ def get_job_urls(user_agents, driver, page_count):
         list: 채용공고 URL 리스트.
     """
     url_list = []
-    for page in range(1, page_count + 1):
+    for page in range(1, 2 + 1): # page_count + 1
         user_agent = user_agents[page % len(user_agents)]
-        soup = requests.get(f'https://www.saramin.co.kr/zf_user/search?cat_mcls=2&company_cd=0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C9%2C10&panel_type=&search_optional_item=y&search_done=y&panel_count=y&preview=y&recruitPage={page}&recruitSort=relation&recruitPageCount=1000&inner_com_type=&searchword=&show_applied=&quick_apply=&except_read=&ai_head_hunting=&mainSearch=n', headers={'User-Agent': user_agent})
+        soup = requests.get(f'https://www.saramin.co.kr/zf_user/search?cat_mcls=2&company_cd=0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C9%2C10&panel_type=&search_optional_item=y&search_done=y&panel_count=y&preview=y&recruitPage={page}&recruitSort=reg_dt&recruitPageCount=200&inner_com_type=&searchword=&show_applied=&quick_apply=&except_read=&ai_head_hunting=&mainSearch=n', headers={'User-Agent': user_agent})
         time.sleep(random.randint(1, 5))
         html = BeautifulSoup(soup.text, 'html.parser')
         jobs = html.select('div.item_recruit')
@@ -78,7 +60,6 @@ def get_job_urls(user_agents, driver, page_count):
                 print(f'{len(url_list)}번째 url을 성공적으로 추출하였습니다.')
             except Exception:
                 pass
-        break
     return url_list
 
 def extract_metadata(soup):
@@ -96,8 +77,8 @@ def extract_metadata(soup):
         meta_content = meta['content']
         match = re.search(r'마감일:(\S+)', meta_content)
         end_date = match.group(1) if match else None
-        return meta_content, end_date
-    return None, None
+        
+    return end_date
 
 def extract_basic_info(driver):
     """
@@ -155,13 +136,15 @@ def extract_job_details(driver, headers):
         headers (dict): 요청에 사용할 헤더.
 
     Returns:
-        tuple: 이미지 URL 리스트와 세부 채용 설명 (HTML 또는 텍스트).
+        tuple: 이미지 URL 리스트, 세부 채용 설명 (HTML 또는 텍스트), 로고 URL.
     """
     iframe_html = driver.find_element(By.XPATH, '//*[@id="iframe_content_0"]')
     iframe_url = iframe_html.get_attribute('src')
     soup = requests.get(iframe_url, headers=headers)
     time.sleep(random.randint(1, 2))
     iframe_soup = BeautifulSoup(soup.text, 'html.parser')
+    
+    # 불필요한 script와 주석 제거
     for script in iframe_soup.find_all("script"):
         script.replace_with("")
     for element in iframe_soup(text=lambda text: isinstance(text, Comment)):
@@ -169,23 +152,26 @@ def extract_job_details(driver, headers):
     
     keyword_list = ['logo', 'icon', 'watermark', 'banner', 'stack', 'topimg', 'interview_pc_1', 'top']
     img_list = []
+    logo_url = None
+    
+    # 이미지 URL 추출
     for img in iframe_soup.find_all("img"):
         src = img['src']
-        if all(keyword not in src for keyword in keyword_list):
-            if src.startswith("//"):
-                src = "https:" + src
+        if src.startswith("//"):
+            src = "https:" + src
+            
+        # logo URL 따로 저장
+        if 'logo' in src:
+            logo_url = src
+        
+        # 기타 이미지 리스트에 추가 (100자 이하만)
+        if all(keyword not in src for keyword in keyword_list if keyword != 'logo') and len(src) <= 100:
             img_list.append(src)
     
-    table_html = iframe_soup.find('table')
+    driver.switch_to.frame("iframe_content_0")
+    detail_info = driver.find_element(By.CLASS_NAME, "user_content").text
     
-    img_list = list(set(img_list))
-    
-    if table_html is not None: # 테이블이 존재하는 경우
-        return img_list, str(iframe_soup.html)
-    else: # 테이블이 존재하지 않는 경우
-        driver.switch_to.frame("iframe_content_0")
-        detail_info = driver.find_element(By.CLASS_NAME, "user_content").text
-        return img_list, detail_info
+    return img_list, detail_info, logo_url
 
 def extract_company_name(driver):
     """
@@ -212,7 +198,7 @@ def task1(user_agents):
     Returns:
         list: 채용공고 URL 리스트.
     """
-    path = get_chromedriver_path()
+    path = './chromedriver'
     driver = init_driver(path)
     url = 'https://www.saramin.co.kr/zf_user/search?cat_mcls=2&company_cd=0%2C1%2C2%2C3%2C4%2C5%2C6%2C7%2C9%2C10&panel_type=&search_optional_item=y&search_done=y&panel_count=y&preview=y&recruitPage=1&recruitSort=relation&recruitPageCount=10&inner_com_type=&searchword=&show_applied=&quick_apply=&except_read=&ai_head_hunting=&mainSearch=n'
     driver.get(url)
@@ -233,7 +219,7 @@ def task2(url_list):
     Args:
         url_list (list): 처리할 채용공고 URL 리스트.
     """
-    path = get_chromedriver_path()
+    path = './chromedriver'
     driver = init_driver(path)
     today = datetime.datetime.now().strftime('%Y-%m-%d')
     headers = {'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3"}
@@ -257,9 +243,9 @@ def task2(url_list):
             pass
 
         try:
-            meta_content, end_date = extract_metadata(soup)
-            if meta_content:
-                job_info_all['metadata'] = meta_content
+            end_date = extract_metadata(soup) # meta_content, 
+            # if meta_content:
+            #     job_info_all['metadata'] = meta_content
             if end_date:
                 job_info_all['end_date'] = end_date
             job_info_all['start_date'] = driver.find_element(By.CLASS_NAME, "info_period").text.split('\n')[1]
@@ -286,17 +272,15 @@ def task2(url_list):
             pass
 
         try:
-            img_list, detail_data = extract_job_details(driver, headers)
+            img_list, detail_data, logo_url = extract_job_details(driver, headers)
             job_info_all['img_list'] = img_list
-            if 'html' in detail_data:
-                job_info_all['detail_data_html'] = detail_data
-            else:
-                job_info_all['detail_data_text'] = detail_data
+            job_info_all['detail_data'] = detail_data
+            job_info_all['logo_url'] = logo_url
         except Exception as e:
             print(f'Error processing 채용공고 내용 {url}: {e}')
             continue
 
-        with open('../ocr/data/saramin_job_data.json', 'a', encoding='utf-8') as f:
+        with open('job_data.json', 'a', encoding='utf-8') as f:
             json.dump(job_info_all, f, ensure_ascii=False, indent=4)
             if index < len(url_list) - 1:
                 f.write(',\n')
